@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RV Session Simulator</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#ffffff;--bg2:#f5f5f3;--bg3:#efefec;
+  --text:#1a1a18;--text2:#6b6b66;--text3:#9a9a94;
+  --border:rgba(0,0,0,0.12);--border2:rgba(0,0,0,0.22);
+  --info-bg:#e6f1fb;--info-text:#185fa5;--info-border:#b5d4f4;
+  --warn-bg:#faeeda;--warn-text:#854f0b;--warn-border:#fac775;
+  --success-border:#5dcaa5;
+  --win:#1D9E75;--loss:#D85A30;--seed:#185FA5;
+  --danger-bg:#FCEBEB;--danger-text:#A32D2D;
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg:#1e1e1c;--bg2:#2a2a28;--bg3:#333330;
+    --text:#e8e6df;--text2:#9a9890;--text3:#6b6965;
+    --border:rgba(255,255,255,0.1);--border2:rgba(255,255,255,0.2);
+    --info-bg:#0c447c;--info-text:#b5d4f4;--info-border:#185fa5;
+    --warn-bg:#633806;--warn-text:#fac775;--warn-border:#854f0b;
+    --success-border:#0f6e56;
+    --win:#5dcaa5;--loss:#f0997b;--seed:#85b7eb;
+    --danger-bg:#3a1a1a;--danger-text:#f0997b;
+  }
+}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);font-size:13px;line-height:1.5;padding:1.5rem;max-width:1200px;margin:0 auto}
+h1{font-size:16px;font-weight:500;margin-bottom:4px}
+.subtitle{font-size:11px;color:var(--text2);margin-bottom:1.25rem}
+.rv-box{background:var(--info-bg);border-radius:8px;padding:10px 14px;margin-bottom:1.25rem}
+.rv-lbl{font-size:10px;color:var(--info-text);opacity:.8;margin-bottom:3px}
+.rv-q{font-size:13px;font-weight:500;color:var(--info-text)}
+.row-ctrl{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;align-items:center}
+.lbl{font-size:11px;color:var(--text2);white-space:nowrap}
+.seq-btn{font-size:11px;padding:4px 10px;border:0.5px solid var(--border2);border-radius:6px;background:transparent;color:var(--text2);cursor:pointer;font-family:monospace;letter-spacing:1px}
+.seq-btn.active{background:var(--info-bg);color:var(--info-text);border-color:var(--info-border)}
+.seq-btn:hover{background:var(--bg2)}
+.lv-btn{font-size:11px;padding:4px 9px;border:0.5px solid var(--border2);border-radius:6px;background:transparent;color:var(--text2);cursor:pointer}
+.lv-btn.active{background:var(--warn-bg);color:var(--warn-text);border-color:var(--warn-border)}
+.lv-btn:hover{background:var(--bg2)}
+.meta{font-size:11px;color:var(--text2);margin-bottom:1rem;line-height:1.7}
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:1rem;font-size:10px;color:var(--text2)}
+.leg-dot{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:middle}
+.tbl-wrap{overflow-x:auto;margin-bottom:1.25rem}
+table{width:100%;border-collapse:collapse;table-layout:fixed;min-width:960px}
+th{font-size:10px;font-weight:500;color:var(--text2);text-align:left;padding:5px 7px;border-bottom:0.5px solid var(--border);white-space:nowrap}
+td{padding:4px 7px;font-size:11px;vertical-align:middle;border-bottom:none}
+.rt td{border-bottom:none}
+.rs td{border-bottom:0.5px solid var(--border);background:var(--bg2);font-size:10px;padding:3px 7px}
+.rx td{border-bottom:0.5px solid var(--border);font-size:10px;padding:3px 7px}
+.rab td{border-bottom:0.5px solid var(--border);background:var(--warn-bg)}
+.rstop td{background:var(--bg2)}
+.col-sep{border-left:0.5px solid var(--border)}
+.w{color:var(--win);font-weight:500}.l{color:var(--loss);font-weight:500}
+.seed-c{color:var(--seed);font-weight:500}.muted{color:var(--text2)}
+.xbadge{display:inline-block;background:var(--danger-bg);color:var(--danger-text);border-radius:3px;padding:0px 5px;font-size:9px;font-weight:500;margin-right:3px}
+.sp-cell{background:var(--danger-bg)}.rs-cell{background:var(--danger-bg)}
+.summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:1.25rem}
+.scard{background:var(--bg2);border-radius:8px;padding:10px 12px;border:0.5px solid transparent}
+.scard.best{border-color:var(--success-border)}
+.scard-label{font-size:10px;color:var(--text2);margin-bottom:4px}
+.scard-val{font-size:20px;font-weight:500}
+.scard-sub{font-size:10px;color:var(--text2);margin-top:2px}
+.scard-bal{font-size:11px;font-weight:500;margin-top:6px;padding-top:6px;border-top:0.5px solid var(--border)}
+.pill{display:inline-block;font-size:9px;padding:1px 6px;border-radius:4px;font-weight:500;margin-left:4px;vertical-align:middle}
+.pill-g{background:#E1F5EE;color:#0F6E56}.pill-b{background:#E6F1FB;color:#185FA5}.pill-a{background:#FAEEDA;color:#854F0B}
+hr.divider{border:none;border-top:0.5px solid var(--border);margin:1.25rem 0}
+.levels-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:8px}
+.lcard{background:var(--bg);border:0.5px solid var(--border);border-radius:8px;padding:10px 12px}
+.lcard-title{font-size:10px;font-weight:500;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px}
+.lrow{display:flex;justify-content:space-between;font-size:11px;padding:3px 0;border-bottom:0.5px solid var(--border);gap:8px}
+.lrow:last-child{border-bottom:none}
+.lrow-lbl{color:var(--text2)}.lrow-val{font-weight:500;text-align:right}
+</style>
+</head>
+<body>
+<h1>RV Session Simulator</h1>
+<p class="subtitle">3-Methoden Vergleich · Fixed $R immer $1.000 · Sprint &amp; Vault starten bei gewähltem Level · Stop 3W oder 3L · Max 9 Trades · 1:1 R:R</p>
+
+<div class="rv-box">
+  <div class="rv-lbl">RV session question — same for all methods</div>
+  <div class="rv-q">"Does this session reach 3 wins before 3 losses?"</div>
+</div>
+
+<div class="row-ctrl"><span class="lbl">Starting level:</span><div id="lv-btns"></div></div>
+<div class="row-ctrl" id="seq-btns"></div>
+
+<div class="legend">
+  <span><span class="leg-dot" style="background:var(--warn-bg);border:0.5px solid var(--warn-border)"></span>AB — Startstand</span>
+  <span><span class="leg-dot" style="background:var(--bg2);border:0.5px solid var(--border)"></span>Stand nach Trade</span>
+  <span><span class="leg-dot" style="background:var(--danger-bg);border:0.5px solid var(--border)"></span>Split / Reset</span>
+</div>
+
+<div class="meta" id="seq-meta"></div>
+
+<div class="tbl-wrap"><table>
+<thead>
+<tr>
+  <th style="width:30px" rowspan="2">Zeile</th>
+  <th style="width:28px" rowspan="2">W/L</th>
+  <th style="width:42px" rowspan="2">Score</th>
+  <th colspan="2" style="border-left:0.5px solid var(--border)">Fixed $R — 1 Pillar (immer $1.000)</th>
+  <th colspan="4" style="border-left:0.5px solid var(--border)">Sprint — 2 Pillars</th>
+  <th colspan="4" style="border-left:0.5px solid var(--border)">Vault −3 — 2 Pillars</th>
+</tr>
+<tr>
+  <th class="col-sep" style="width:68px">Bet</th><th style="width:66px">cum P&L</th>
+  <th class="col-sep" style="width:80px">P1</th><th style="width:80px">P2</th><th style="width:46px">Lvl</th><th style="width:66px">cum P&L</th>
+  <th class="col-sep" style="width:80px">P1</th><th style="width:80px">P2</th><th style="width:46px">Lvl</th><th style="width:66px">cum P&L</th>
+</tr>
+</thead>
+<tbody id="tbl-body"></tbody>
+</table></div>
+
+<div class="summary-grid" id="summary"></div>
+<hr class="divider">
+<div>
+  <div style="font-size:11px;font-weight:500;color:var(--text2);margin-bottom:2px">Pillar Levels — Vor &amp; Nach Session</div>
+  <div style="font-size:10px;color:var(--text2);margin-bottom:8px">
+    Fixed $R: immer $1.000 Einsatz · Starting balance = $1.000 (1 Pillar) &nbsp;|&nbsp;
+    Sprint &amp; Vault: Starting balance = 2 × levelVal(L) = kumulierter Best-Case-Stand
+  </div>
+  <div class="levels-grid" id="levels-detail"></div>
+</div>
+
+<script>
+const SEED=1000;
+const R_FIXED=1000;
+const seqs=[
+  {label:'W W W',seq:['W','W','W']},
+  {label:'L L L',seq:['L','L','L']},
+  {label:'W L W W',seq:['W','L','W','W']},
+  {label:'L W L W W',seq:['L','W','L','W','W']},
+  {label:'W W L L L',seq:['W','W','L','L','L']},
+  {label:'L W W L W',seq:['L','W','W','L','W']},
+  {label:'W L L W W W',seq:['W','L','L','W','W','W']},
+  {label:'W L W L W L W L W',seq:['W','L','W','L','W','L','W','L','W']},
+  {label:'W L W L W L L L',seq:['W','L','W','L','W','L','L','L']},
+];
+const lvls=[0,1,2,3,4,5,6];
+let curLv=0,curSq=0;
+
+function lv(l){return SEED*Math.pow(2,l);}
+function s2l(v,sl){let l=sl;while(lv(l)<Math.round(v)-1&&l<20)l++;return l;}
+function fpl(v){
+  if(v===0)return'<span class="muted">$0</span>';
+  return`<span class="${v>0?'w':'l'}">${v>0?'+':''}$${Math.round(Math.abs(v)).toLocaleString()}</span>`;
+}
+function fv(v,sv){
+  return`<span class="${Math.round(v)===Math.round(sv)?'seed-c':'muted'}">$${Math.round(v).toLocaleString()}</span>`;
+}
+function fls(l,sl){
+  const d=l-sl;
+  const a=d>0?`<span class="w" style="font-size:9px"> +${d}</span>`:d<0?`<span class="l" style="font-size:9px"> ${d}</span>`:'';
+  return`<span style="font-size:10px;color:var(--text2)">L${l}</span>${a}`;
+}
+function dash(){return'<span class="muted">—</span>';}
+function lvB(l){return`L${l} <span class="muted" style="font-size:10px">($${lv(l).toLocaleString()})</span>`;}
+function dB(a,b){const d=b-a;return d>0?`<span class="w">+${d}</span>`:d<0?`<span class="l">${d}</span>`:`<span class="muted">±0</span>`;}
+function lrw(l,v){return`<div class="lrow"><span class="lrow-lbl">${l}</span><span class="lrow-val">${v}</span></div>`;}
+
+function run(seq,sl){
+  const rows=[];let w=0,ls=0;const sv=lv(sl);
+  let rpl=0;
+  let sp1=sv,sp2=sv,spl=0;
+  let vp1=sv,vp2=sv,vl1=sl,vl2=sl,vpl=0;
+  let done=false;
+  for(let i=0;i<seq.length;i++){
+    if(done)break;
+    const t=seq[i],win=t==='W';
+    if(win)w++;else ls++;
+    rpl+=win?R_FIXED:-R_FIXED;
+    const si1=sp1<=sp2,sb=si1?sp1:sp2;
+    let splt=null;
+    if(win){spl+=sb;if(si1)sp1*=2;else sp2*=2;}
+    else{
+      spl-=sb;
+      const hi=si1?sp2:sp1,hl=si1?'P2':'P1';
+      const half=Math.max(SEED,Math.floor(hi/2));
+      splt={hl,hi,half};sp1=half;sp2=half;
+    }
+    const vi1=vp1<=vp2,vb=vi1?vp1:vp2;
+    let vrst=null;
+    if(win){vpl+=vb;if(vi1){vp1*=2;vl1++;}else{vp2*=2;vl2++;}}
+    else{
+      vpl-=vb;
+      if(vi1){const ol=vl1,nl=Math.max(0,vl1-3);vrst={p:'P1',ol,nl,hp:'P2',hv:vp2};vl1=nl;vp1=lv(nl);}
+      else{const ol=vl2,nl=Math.max(0,vl2-3);vrst={p:'P2',ol,nl,hp:'P1',hv:vp1};vl2=nl;vp2=lv(nl);}
+    }
+    const sl1=s2l(sp1,sl),sl2=s2l(sp2,sl);
+    const stop=w>=3||ls>=3;
+    rows.push({n:i+1,t,w,ls,stop,rpl,
+      sbP1:si1?sb:null,sbP2:!si1?sb:null,
+      vbP1:vi1?vb:null,vbP2:!vi1?vb:null,
+      splt,vrst,sp1,sp2,sl1,sl2,spl,vp1,vp2,vl1,vl2,vpl});
+    if(stop)done=true;
+  }
+  return{rows,w,ls,
+    fsp1:sp1,fsp2:sp2,fsl1:s2l(sp1,sl),fsl2:s2l(sp2,sl),fspl:spl,
+    fvp1:vp1,fvp2:vp2,fvl1:vl1,fvl2:vl2,fvpl:vpl,frpl:rpl};
+}
+
+function render(){
+  const s=seqs[curSq],sv=lv(curLv);
+  const res=run(s.seq,curLv);
+  const won=res.w>=3;
+  // Fixed $R: always $1,000 bet, starting balance always $1,000 (level-independent)
+  const rStartBal=sv;
+  // Sprint & Vault: 2 pillars at levelVal = cumulative best-case balance
+  const svStartBal=sv*2;
+
+  document.getElementById('seq-meta').innerHTML=
+    `Sequence: <span style="font-family:monospace;letter-spacing:1px">${s.seq.join(' ')}</span> &nbsp;·&nbsp; `+
+    `Starting level: <span style="color:var(--warn-text);font-weight:500">L${curLv}</span> &nbsp;·&nbsp; `+
+    `Fixed $R start: <span style="font-weight:500">$${rStartBal.toLocaleString()}</span> &nbsp;·&nbsp; `+
+    `Sprint/Vault start: <span style="font-weight:500">$${svStartBal.toLocaleString()}</span> &nbsp;·&nbsp; `+
+    `Session: <span class="${won?'w':'l'}">${won?'3 wins reached':'3 losses reached'}</span>`;
+
+  let h='';
+  // AB row
+  h+=`<tr class="rab"><td><b style="font-size:9px">AB</b></td><td>—</td><td style="font-size:10px">0W 0L</td>`;
+  h+=`<td class="col-sep"><span style="color:var(--seed);font-weight:500">$${R_FIXED.toLocaleString()}</span></td><td><span class="muted">$0</span></td>`;
+  h+=`<td class="col-sep">${fv(sv,sv)}</td><td>${fv(sv,sv)}</td><td>${fls(curLv,curLv)}</td><td><span class="muted">$0</span></td>`;
+  h+=`<td class="col-sep">${fv(sv,sv)}</td><td>${fv(sv,sv)}</td><td>${fls(curLv,curLv)}</td><td><span class="muted">$0</span></td></tr>`;
+
+  res.rows.forEach(r=>{
+    const sc=r.stop?' rstop':'';
+    h+=`<tr class="rt${sc}">`;
+    h+=`<td class="muted">${r.n}</td><td class="${r.t==='W'?'w':'l'}">${r.t}</td>`;
+    h+=`<td style="font-size:10px" class="muted">${r.w}W ${r.ls}L</td>`;
+    h+=`<td class="col-sep"><span class="muted">$${R_FIXED.toLocaleString()}</span></td>`;
+    h+=`<td>${fpl(r.rpl)}</td>`;
+    h+=`<td class="col-sep">${r.sbP1!==null?`<span class="muted" style="font-size:9px">bet </span>${fv(r.sbP1,sv)}`:dash()}</td>`;
+    h+=`<td>${r.sbP2!==null?`<span class="muted" style="font-size:9px">bet </span>${fv(r.sbP2,sv)}`:dash()}</td>`;
+    h+=`<td>${dash()}</td><td>${dash()}</td>`;
+    h+=`<td class="col-sep">${r.vbP1!==null?`<span class="muted" style="font-size:9px">bet </span>${fv(r.vbP1,sv)}`:dash()}</td>`;
+    h+=`<td>${r.vbP2!==null?`<span class="muted" style="font-size:9px">bet </span>${fv(r.vbP2,sv)}`:dash()}</td>`;
+    h+=`<td>${dash()}</td><td>${dash()}</td></tr>`;
+
+    h+=`<tr class="rs">`;
+    h+=`<td colspan="3" class="muted" style="font-style:italic">Stand</td>`;
+    h+=`<td class="col-sep" colspan="2">${fpl(r.rpl)}</td>`;
+    h+=`<td class="col-sep">${fv(r.sp1,sv)}</td><td>${fv(r.sp2,sv)}</td>`;
+    h+=`<td>${fls(r.sl1,curLv)} / ${fls(r.sl2,curLv)}</td><td>${fpl(r.spl)}</td>`;
+    h+=`<td class="col-sep">${fv(r.vp1,sv)}</td><td>${fv(r.vp2,sv)}</td>`;
+    h+=`<td>${fls(r.vl1,curLv)} / ${fls(r.vl2,curLv)}</td><td>${fpl(r.vpl)}</td></tr>`;
+
+    if(r.splt||r.vrst){
+      h+=`<tr class="rx">`;
+      h+=`<td colspan="3"></td>`;
+      h+=`<td class="col-sep" colspan="2"></td>`;
+      if(r.splt){
+        const{hl,hi,half}=r.splt;
+        h+=`<td class="col-sep sp-cell" colspan="4">`;
+        h+=`<span class="xbadge">Split</span>`;
+        h+=`${hl} <span class="muted">$${Math.round(hi).toLocaleString()}</span> ÷2`;
+        h+=` → P1 <span class="w">$${Math.round(half).toLocaleString()}</span>`;
+        h+=` &amp; P2 <span class="w">$${Math.round(half).toLocaleString()}</span>`;
+        h+=`</td>`;
+      } else {
+        h+=`<td class="col-sep" colspan="4"></td>`;
+      }
+      if(r.vrst){
+        const{p,ol,nl,hp,hv}=r.vrst;
+        h+=`<td class="col-sep rs-cell" colspan="4">`;
+        h+=`<span class="xbadge">Reset</span>`;
+        h+=`${p}: L${ol}→L${nl} (<span class="l">$${lv(nl).toLocaleString()}</span>)`;
+        h+=` &nbsp;·&nbsp; ${hp} <span class="muted">$${Math.round(hv).toLocaleString()}</span> unberührt`;
+        h+=`</td>`;
+      } else {
+        h+=`<td class="col-sep" colspan="4"></td>`;
+      }
+      h+=`</tr>`;
+    }
+  });
+
+  document.getElementById('tbl-body').innerHTML=h;
+
+  const rEndBal=rStartBal+res.frpl;
+  const spEndBal=res.fsp1+res.fsp2;
+  const vEndBal=res.fvp1+res.fvp2;
+  const rn=res.frpl,sn=res.fspl,vn=res.fvpl,bn=Math.max(rn,sn,vn);
+
+  function sc(lbl,net,startBal,endBal,pill,pc,sub){
+    const c=net>0?'w':net<0?'l':'muted',best=net===bn&&net>0?' best':'';
+    const bc=endBal>startBal?'w':endBal<startBal?'l':'muted';
+    return`<div class="scard${best}">
+      <div class="scard-label">${lbl} <span class="pill ${pc}">${pill}</span></div>
+      <div class="scard-val ${c}">${net>=0?'+':''}$${Math.round(Math.abs(net)).toLocaleString()}</div>
+      <div class="scard-sub">${sub}</div>
+      <div class="scard-bal">Start: $${Math.round(startBal).toLocaleString()} &nbsp;·&nbsp; Ende: <span class="${bc}">$${Math.round(endBal).toLocaleString()}</span></div>
+    </div>`;
+  }
+  document.getElementById('summary').innerHTML=
+    sc('Fixed $R',rn,rStartBal,rEndBal,'1 Pillar','pill-a','immer $1.000 · kein Level-Effekt')+
+    sc('Sprint',sn,svStartBal,spEndBal,'2 Pillars','pill-b','höherer splittet → beide gleich')+
+    sc('Vault −3',vn,svStartBal,vEndBal,'2 Pillars','pill-g','niedrigerer reset −3 · höherer unberührt');
+
+  let ld=`<div class="lcard"><div class="lcard-title">Fixed $R</div>`;
+  ld+=lrw('Bet (immer fix)','$'+R_FIXED.toLocaleString());
+  ld+=lrw('Pillars','1');
+  ld+=lrw('Start balance','$'+rStartBal.toLocaleString());
+  ld+=lrw('Net P&L',fpl(res.frpl));
+  ld+=lrw('Ending balance',`<span class="${rEndBal>=rStartBal?'w':'l'}">$${Math.round(rEndBal).toLocaleString()}</span>`);
+  ld+=`</div>`;
+
+  ld+=`<div class="lcard"><div class="lcard-title">Sprint</div>`;
+  ld+=lrw('P1 Start→Ende',`${lvB(curLv)} → ${lvB(res.fsl1)} ${dB(curLv,res.fsl1)}`);
+  ld+=lrw('P2 Start→Ende',`${lvB(curLv)} → ${lvB(res.fsl2)} ${dB(curLv,res.fsl2)}`);
+  ld+=lrw('P1 Stake','$'+Math.round(res.fsp1).toLocaleString());
+  ld+=lrw('P2 Stake','$'+Math.round(res.fsp2).toLocaleString());
+  ld+=lrw('Start balance','$'+svStartBal.toLocaleString());
+  ld+=lrw('Net P&L',fpl(res.fspl));
+  ld+=lrw('Ending balance',`<span class="${spEndBal>=svStartBal?'w':'l'}">$${Math.round(spEndBal).toLocaleString()}</span>`);
+  ld+=`<div style="font-size:9px;color:var(--text2);margin-top:6px">Blau = Startlevel Einsatz · Verlust: höherer ÷2 → beide gleich</div></div>`;
+
+  ld+=`<div class="lcard"><div class="lcard-title">Vault −3</div>`;
+  ld+=lrw('P1 Start→Ende',`${lvB(curLv)} → ${lvB(res.fvl1)} ${dB(curLv,res.fvl1)}`);
+  ld+=lrw('P2 Start→Ende',`${lvB(curLv)} → ${lvB(res.fvl2)} ${dB(curLv,res.fvl2)}`);
+  ld+=lrw('P1 Wert','$'+Math.round(res.fvp1).toLocaleString());
+  ld+=lrw('P2 Wert','$'+Math.round(res.fvp2).toLocaleString());
+  ld+=lrw('Start balance','$'+svStartBal.toLocaleString());
+  ld+=lrw('Net P&L',fpl(res.fvpl));
+  ld+=lrw('Ending balance',`<span class="${vEndBal>=svStartBal?'w':'l'}">$${Math.round(vEndBal).toLocaleString()}</span>`);
+  ld+=`<div style="font-size:9px;color:var(--text2);margin-top:6px">Verlust: niedrigerer reset max(L−3,0) · höherer unberührt</div></div>`;
+
+  document.getElementById('levels-detail').innerHTML=ld;
+}
+
+document.getElementById('lv-btns').innerHTML=lvls.map(l=>
+  `<button class="lv-btn${l===0?' active':''}" onclick="curLv=${l};document.querySelectorAll('.lv-btn').forEach((b,i)=>b.classList.toggle('active',[${lvls}][i]===${l}));render()">${'L'+l}</button>`
+).join('');
+document.getElementById('seq-btns').innerHTML=seqs.map((s,i)=>
+  `<button class="seq-btn${i===0?' active':''}" onclick="curSq=${i};document.querySelectorAll('.seq-btn').forEach((b,j)=>b.classList.toggle('active',j===${i}));render()">${s.label}</button>`
+).join('');
+
+render();
+</script>
+</body>
+</html>
